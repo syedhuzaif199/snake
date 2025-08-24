@@ -1,6 +1,5 @@
 #!/bin/sh
-
 set -xe
-
-gcc -O2 -o main main.c -I libs/raylib/src -L libs/raylib/src -lraylib -lgdi32 -lwinmm
-gcc -o test test.c
+mkdir -p build
+gcc -O2 -o build/main src/main.c -I libs/raylib/src -L libs/raylib/src -lraylib -lm
+gcc -o build/test src/test.c
