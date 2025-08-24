@@ -1,0 +1,5 @@
+/.vscode
+build/
+/libs/raylib/src/*.a
+/libs/raylib/src/*.so
+/libs/raylib/src/*.o
