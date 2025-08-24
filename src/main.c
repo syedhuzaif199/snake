@@ -12,6 +12,13 @@
 #define SNAKE_GREEN CLITERAL(Color){ 106, 200, 89, 255 }
 #define SNAKE_BORDER_COLOR BLACK
 
+typedef enum {
+    DIR_UP,
+    DIR_DOWN,
+    DIR_LEFT,
+    DIR_RIGHT,
+} SnakeDirection;
+
 int get_food_snake_collision_body_part_index(Vector2 food, Vector2 *snake_body, int snake_body_count) {
     for(int i = 0; i < snake_body_count; i++) {
         if(snake_body[i].x == food.x && snake_body[i].y == food.y) {
@@ -199,6 +206,124 @@ void draw_grid_bg() {
     }
 }
 
+SnakeDirection get_opposite_snake_direction(SnakeDirection snake_direction) {
+    switch (snake_direction)
+    {
+    case DIR_UP:
+        return DIR_DOWN;
+        break;
+    case DIR_DOWN:
+        return DIR_UP;
+        break;
+    case DIR_LEFT:
+        return DIR_RIGHT;
+        break;
+    case DIR_RIGHT:
+        return DIR_LEFT;
+        break;
+    default:
+        fprintf(
+            stderr,
+            "Error: default case shouldn't be reached in function: "
+            "get_opposite_snake_direction() function\n"
+        );
+        // TODO(huzaif): What would be a good return value here?
+        return -1;
+    }
+}
+
+Vector2 vector2_from_snake_direction(SnakeDirection snake_direction) {
+    switch (snake_direction)
+    {
+    case DIR_UP:
+        return (Vector2) {0, -1};
+        break;
+    case DIR_DOWN:
+        return (Vector2) {0, 1};
+        break;
+    case DIR_LEFT:
+        return (Vector2) {-1, 0};
+        break;
+    case DIR_RIGHT:
+        return (Vector2) {1, 0};
+        break;
+    default:
+        fprintf(
+            stderr,
+            "Error: default case shouldn't be reached in function: "
+            "get_opposite_snake_direction() function\n"
+        );
+        // TODO(huzaif): What would be a good return value here?
+        return (Vector2) {0, 0};
+    }
+}
+
+char *snake_direction_to_string(SnakeDirection snake_direction) {
+        switch(snake_direction) {
+            case DIR_UP:
+                return "UP";
+            case DIR_DOWN:
+                return "DOWN";
+            case DIR_LEFT:
+                return "LEFT";
+            case DIR_RIGHT:
+                return "RIGHT";
+            default:
+                return "";
+        }
+}
+
+void input_queue_full_data_printer(Queue *q) {
+    SnakeDirection *data = (SnakeDirection *) q->data;
+    printf("Input Queue: [\n");
+    for(size_t i = 0; i < q->capacity; i++) {
+        char *start = "-";
+        char *end = "-";
+        if(q->start == i) {
+            start = "s";
+        }
+        if(q->end == i) {
+            end = "e";
+        }
+        char *dir = snake_direction_to_string(data[i]);
+        printf("%s %s \t%zu => %s,\n", start, end, i, dir);
+    }
+    printf("]\n");
+}
+
+void input_queue_filled_data_printer(Queue *q) {
+    SnakeDirection *data = (SnakeDirection *) q->data;
+    printf("Input Queue: [\n");
+    int i = q->start;
+    while(1) {
+        if(q->start == -1) {
+            break;
+        }
+        int idx = i % q->capacity;
+        char *start = "-";
+        char *end = "-";
+        if(q->start == idx) {
+            start = "s";
+        }
+        if(q->end == idx) {
+            end = "e";
+        }
+        char *dir = snake_direction_to_string(data[idx]);
+        printf("%s %s %s,\n", start, end, dir);
+
+        i += 1;
+
+        if(i % q->capacity == q->end) {
+            break;
+        }
+    }
+    printf("]\n");
+}
+
+void input_queue_data_printer(Queue *q) {
+    // input_queue_full_data_printer(q);
+    input_queue_filled_data_printer(q);
+}
 
 int main() {
     const int screen_width = 32 * SNAKE_BODY_WIDTH;
@@ -207,42 +332,74 @@ int main() {
     int cols = screen_width / SNAKE_BODY_WIDTH;
     InitWindow(screen_width, screen_height, "Snake");
     SetTargetFPS(FPS);
+    // TODO(huzaif): Implement a dynamic array and use it for the snake body
     Vector2 snake_body[1000] = {
         (Vector2) {cols/2, rows/2},
         (Vector2) {cols/2 - 1, rows/2},
         (Vector2) {cols/2 - 2 , rows/2},
     };
     int snake_body_count = 3;
-    Vector2 snake_direction = {1, 0};
+    SnakeDirection snake_direction = DIR_RIGHT;
     int frames_elapsed = 0;
     int snake_movement_frame_delay = 0.25 * FPS; // one second delay
 
     Vector2 food = generate_food(snake_body, snake_body_count);
 
-    Queue *input_queue = queue_create(sizeof(Vector2), 5);
+    int score = 0;
+
+    Queue *input_queue = queue_create(sizeof(SnakeDirection), 5);
     while(!WindowShouldClose()) {
 
+        // TODO(huzaif): function peek_end() has not been tested
+        // TODO(huzaif): test if the input queue implementation actually works properly;
+
+        SnakeDirection *input_queue_latest = peek_end(input_queue);
+        SnakeDirection direction_to_queue;
         if(IsKeyPressed(KEY_W)) {
-            if(snake_direction.y != 1) {
-                snake_direction = (Vector2){0, -1};
+            if(
+                !input_queue_latest ||
+                !(*input_queue_latest == DIR_UP || *input_queue_latest == DIR_DOWN)
+            ) {
+                direction_to_queue = DIR_UP;
+                enqueue(input_queue, &direction_to_queue);
+                printf("\nW pressed!\n");
+                input_queue_data_printer(input_queue);
             }
         }
 
         if(IsKeyPressed(KEY_S)) {
-            if(snake_direction.y != -1) {
-                snake_direction = (Vector2){0, 1};
+            if(
+                !input_queue_latest ||
+                !(*input_queue_latest == DIR_UP || *input_queue_latest == DIR_DOWN)
+            ) {
+                direction_to_queue = DIR_DOWN;
+                enqueue(input_queue, &direction_to_queue);
+                printf("\nS pressed!\n");
+                input_queue_data_printer(input_queue);
             }
         }
 
         if(IsKeyPressed(KEY_A)) {
-            if(snake_direction.x != 1) {
-                snake_direction = (Vector2){-1, 0};
+            if(
+                !input_queue_latest ||
+                !(*input_queue_latest == DIR_LEFT || *input_queue_latest == DIR_RIGHT)
+            ) {
+                direction_to_queue = DIR_LEFT;
+                enqueue(input_queue, &direction_to_queue);
+                printf("\nA pressed!\n");
+                input_queue_data_printer(input_queue);
             }
         }
 
         if(IsKeyPressed(KEY_D)) {
-            if(snake_direction.x != -1) {
-                snake_direction = (Vector2){1, 0};
+            if(
+                !input_queue_latest ||
+                !(*input_queue_latest == DIR_LEFT || *input_queue_latest == DIR_RIGHT)
+            ) {
+                direction_to_queue = DIR_RIGHT;
+                enqueue(input_queue, &direction_to_queue);
+                printf("\nD pressed!\n");
+                input_queue_data_printer(input_queue);
             }
         }
 
@@ -253,8 +410,16 @@ int main() {
             for(int i = snake_body_count - 1; i > 0; i--) {
                 snake_body[i] = snake_body[i-1];
             }
-            snake_body[0].x += snake_direction.x;
-            snake_body[0].y += snake_direction.y;
+            SnakeDirection *next_candidate_snake_direction = dequeue(input_queue);
+            if(
+                next_candidate_snake_direction &&
+                *next_candidate_snake_direction != get_opposite_snake_direction(snake_direction)
+            ) {
+                snake_direction = *next_candidate_snake_direction;
+            }
+            Vector2 vector2_snake_direction = vector2_from_snake_direction(snake_direction);
+            snake_body[0].x += vector2_snake_direction.x;
+            snake_body[0].y += vector2_snake_direction.y;
             int collided_body_part_index = get_food_snake_collision_body_part_index(
                 food,
                 snake_body,
