@@ -469,7 +469,7 @@ int main() {
             // draw_dot_matrix_bg();
             // draw_plus_matrix_bg();
             // draw_grid_bg();
-            // draw_checkered_bg();
+            draw_checkered_bg();
             draw_food(food);
             draw_snake(snake_body, snake_body_count);
         }
