@@ -7,7 +7,7 @@
 #define FPS 60
 #define SNAKE_BODY_WIDTH 24
 #define BG_PRIMARY CLITERAL(Color){ 6, 13, 17, 255 }
-#define BG_SECONDARY CLITERAL(Color){ 8, 18, 23, 255 }
+#define BG_SECONDARY CLITERAL(Color){ 28, 39, 45, 255 }
 
 #define SNAKE_GREEN CLITERAL(Color){ 106, 200, 89, 255 }
 #define SNAKE_BORDER_COLOR BLACK
@@ -145,7 +145,7 @@ void draw_dot_matrix_bg() {
     ClearBackground(BG_PRIMARY);
     int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
     int cols = GetScreenWidth() / SNAKE_BODY_WIDTH;
-    int dot_thickness = 6;
+    int dot_thickness = 4;
     for(int i = 0; i < rows; i++) {
         for(int j = 0; j < cols; j++) {
             DrawRectangle(
@@ -203,6 +203,25 @@ void draw_grid_bg() {
             line_thickness,
             BG_SECONDARY
         );
+    }
+}
+
+void draw_checkered_bg() {
+    ClearBackground(BG_PRIMARY);
+    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
+    int cols = GetScreenWidth() / SNAKE_BODY_WIDTH;
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < cols; j++) {
+            if((i + j) % 2 == 0) {
+                DrawRectangle(
+                    j * SNAKE_BODY_WIDTH,
+                    i * SNAKE_BODY_WIDTH,
+                    SNAKE_BODY_WIDTH,
+                    SNAKE_BODY_WIDTH,
+                    BG_SECONDARY
+                );
+            }
+        }
     }
 }
 
@@ -448,8 +467,9 @@ int main() {
             // draw_thick_striped_bg();
             // draw_semi_thick_striped_bg();
             // draw_dot_matrix_bg();
-            draw_plus_matrix_bg();
+            // draw_plus_matrix_bg();
             // draw_grid_bg();
+            // draw_checkered_bg();
             draw_food(food);
             draw_snake(snake_body, snake_body_count);
         }
