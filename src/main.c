@@ -438,13 +438,26 @@ int main() {
             }
             Vector2 vector2_snake_direction = vector2_from_snake_direction(snake_direction);
             snake_body[0].x += vector2_snake_direction.x;
+            if(snake_body[0].x < 0) {
+                snake_body[0].x = cols - 1;
+            }
+            if(snake_body[0].x >= cols) {
+                snake_body[0].x = 0;
+            }
             snake_body[0].y += vector2_snake_direction.y;
+            if(snake_body[0].y < 0) {
+                snake_body[0].y = rows - 1;
+            }
+            if(snake_body[0].y >= cols) {
+                snake_body[0].y = 0;
+            }
             int collided_body_part_index = get_food_snake_collision_body_part_index(
                 food,
                 snake_body,
                 snake_body_count
             );
             if(collided_body_part_index == 0) {
+                score++;
                 food = generate_food(snake_body, snake_body_count);
                 Vector2 snake_tail = snake_body[snake_body_count - 1];
                 Vector2 part_before_snake_tail = snake_body[snake_body_count - 2];
@@ -460,6 +473,10 @@ int main() {
                 };
             }
         }
+
+        char score_text[256];
+        sprintf(score_text, "Score: %d", score);
+        int score_text_width = MeasureText(score_text, 20);
         BeginDrawing();
         {
             // draw_striped_bg();
@@ -472,6 +489,7 @@ int main() {
             draw_checkered_bg();
             draw_food(food);
             draw_snake(snake_body, snake_body_count);
+            DrawText(score_text, screen_width - score_text_width - 10, 10, 20, ORANGE);
         }
         EndDrawing();
     }
