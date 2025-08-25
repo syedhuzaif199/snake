@@ -73,6 +73,7 @@ bool enqueue(Queue* queue, void *data) {
     memcpy(&bytes[queue->end * queue->data_size], data, queue->data_size);
     queue->end += 1;
     queue->end %= queue->capacity;
+    return true;
 }
 void *dequeue(Queue *queue) {
     if(queue->start == -1) {
