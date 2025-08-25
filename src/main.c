@@ -19,12 +19,29 @@ typedef enum {
     DIR_RIGHT,
 } SnakeDirection;
 
-int get_food_snake_collision_body_part_index(Vector2 food, Vector2 *snake_body, int snake_body_count) {
+typedef enum {
+    PLAYING,
+    PAUSED,
+    GAME_OVER,
+} GameState;
+
+int food_snake_body_collision_index(Vector2 food, Vector2 *snake_body, int snake_body_count) {
     for(int i = 0; i < snake_body_count; i++) {
         if(snake_body[i].x == food.x && snake_body[i].y == food.y) {
             return i;
         }
     }
+    return -1;
+}
+
+int snake_head_snake_body_collision_index(Vector2 *snake_body, int snake_body_count) {
+    Vector2 snake_head = snake_body[0];
+    for(int i = 1; i < snake_body_count; i++) {
+        if(snake_head.x == snake_body[i].x && snake_head.y == snake_body[i].y) {
+            return i;
+        }
+    }
+
     return -1;
 }
 
@@ -37,7 +54,7 @@ Vector2 generate_food(Vector2 *snake_body, int snake_body_count) {
     int col = GetRandomValue(0, cols-1);
     bool generated = false;
     do {
-        if(get_food_snake_collision_body_part_index(
+        if(food_snake_body_collision_index(
             (Vector2) {col, row},
             snake_body,
             snake_body_count
@@ -367,6 +384,7 @@ int main() {
     int score = 0;
 
     Queue *input_queue = queue_create(sizeof(SnakeDirection), 5);
+    GameState game_state = PLAYING;
     while(!WindowShouldClose()) {
 
         // TODO(huzaif): function peek_end() has not been tested
@@ -424,7 +442,7 @@ int main() {
 
         // update snake head
         frames_elapsed += 1;
-        if(frames_elapsed > snake_movement_frame_delay) {
+        if(game_state == PLAYING && frames_elapsed > snake_movement_frame_delay) {
             frames_elapsed = 0;
             for(int i = snake_body_count - 1; i > 0; i--) {
                 snake_body[i] = snake_body[i-1];
@@ -451,7 +469,7 @@ int main() {
             if(snake_body[0].y >= cols) {
                 snake_body[0].y = 0;
             }
-            int collided_body_part_index = get_food_snake_collision_body_part_index(
+            int collided_body_part_index = food_snake_body_collision_index(
                 food,
                 snake_body,
                 snake_body_count
@@ -472,11 +490,20 @@ int main() {
                     .y = snake_tail.y + diff.y,
                 };
             }
+
+            collided_body_part_index = snake_head_snake_body_collision_index(snake_body, snake_body_count);
+            if(collided_body_part_index != -1) {
+                game_state = GAME_OVER;
+            }
         }
 
         char score_text[256];
         sprintf(score_text, "Score: %d", score);
         int score_text_width = MeasureText(score_text, 20);
+
+        char game_over_text[256];
+        sprintf(game_over_text, "Game Over!");
+        int game_over_text_width = MeasureText(game_over_text, 20);
         BeginDrawing();
         {
             // draw_striped_bg();
@@ -490,6 +517,9 @@ int main() {
             draw_food(food);
             draw_snake(snake_body, snake_body_count);
             DrawText(score_text, screen_width - score_text_width - 10, 10, 20, ORANGE);
+            if(game_state == GAME_OVER) {
+                DrawText(game_over_text, screen_width/2 - game_over_text_width/2, 10, 20, RED);
+            }
         }
         EndDrawing();
     }
