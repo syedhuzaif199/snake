@@ -6,11 +6,11 @@
 
 #define FPS 60
 #define SNAKE_BODY_WIDTH 24
-#define BG_PRIMARY CLITERAL(Color){ 6, 13, 17, 255 }
+
+#define BG_PRIMARY CLITERAL(Color){ 11, 24, 31, 255 }
 #define BG_SECONDARY CLITERAL(Color){ 28, 39, 45, 255 }
 
 #define SNAKE_GREEN CLITERAL(Color){ 106, 200, 89, 255 }
-#define SNAKE_BORDER_COLOR BLACK
 
 typedef enum {
     DIR_UP,
@@ -24,6 +24,8 @@ typedef enum {
     PAUSED,
     GAME_OVER,
 } GameState;
+
+static GameState game_state = PLAYING;
 
 int food_snake_body_collision_index(Vector2 food, Vector2 *snake_body, int snake_body_count) {
     for(int i = 0; i < snake_body_count; i++) {
@@ -88,7 +90,7 @@ void draw_snake(Vector2 *snake_body, int snake_body_count) {
             SNAKE_BODY_WIDTH * (snake_body_part.y),
             SNAKE_BODY_WIDTH,
             SNAKE_BODY_WIDTH,
-            SNAKE_BORDER_COLOR
+            BG_PRIMARY
         );
     }
 }
@@ -102,14 +104,132 @@ void draw_food(Vector2 food) {
         ORANGE
     );
 
-    DrawRectangleLines(
-        SNAKE_BODY_WIDTH * (food.x),
-        SNAKE_BODY_WIDTH * (food.y),
-        SNAKE_BODY_WIDTH,
-        SNAKE_BODY_WIDTH,
-        SNAKE_BORDER_COLOR
+    // draw left eye
+    DrawCircle(
+        SNAKE_BODY_WIDTH * (food.x + 0.3),
+        SNAKE_BODY_WIDTH * (food.y + 0.3),
+        0.1 * SNAKE_BODY_WIDTH,
+        BG_PRIMARY
+    );
+
+    // draw right eye
+    DrawCircle(
+        SNAKE_BODY_WIDTH * (food.x + 0.7),
+        SNAKE_BODY_WIDTH * (food.y + 0.3),
+        0.1 * SNAKE_BODY_WIDTH,
+        BG_PRIMARY
+    );
+
+    // draw smiley
+    if(game_state == GAME_OVER) {
+        DrawCircleSector(
+            (Vector2) {
+                SNAKE_BODY_WIDTH * (food.x + 0.5),
+                SNAKE_BODY_WIDTH * (food.y + 0.5),
+            },
+            SNAKE_BODY_WIDTH/4,
+            0,
+            180,
+            3,
+            BG_PRIMARY
+        );
+    } else if(game_state == PAUSED) {
+        DrawLineEx(
+            (Vector2) {
+                SNAKE_BODY_WIDTH * (food.x + 0.3),
+                SNAKE_BODY_WIDTH * (food.y + 0.7),
+            },
+            (Vector2) {
+                SNAKE_BODY_WIDTH * (food.x + 0.7),
+                SNAKE_BODY_WIDTH * (food.y + 0.7),
+            },
+            2,
+            BG_PRIMARY
+        );
+    } else if(game_state == PLAYING) {
+        DrawCircleSector(
+            (Vector2) {
+                SNAKE_BODY_WIDTH * (food.x + 0.5),
+                SNAKE_BODY_WIDTH * (food.y + 0.75),
+            },
+            SNAKE_BODY_WIDTH/4,
+            180,
+            360,
+            3,
+            BG_PRIMARY
+        );
+    }
+
+    Color food_highlight_color = GRAY;
+    int time_ms = (int) (GetTime() * 1000.0);
+    int highlight_offset = 4 + (time_ms % 300)/100;
+
+    // draw right from top-left
+    DrawLineEx(
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - (highlight_offset + 1), SNAKE_BODY_WIDTH * food.y - highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x + highlight_offset, SNAKE_BODY_WIDTH * food.y - highlight_offset},
+        2,
+        food_highlight_color
+    );
+
+    // draw down from top-left
+    DrawLineEx(
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset, SNAKE_BODY_WIDTH * food.y - (highlight_offset + 1)},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset, SNAKE_BODY_WIDTH * food.y + highlight_offset},
+        2,
+        food_highlight_color
+    );
+
+    // draw right from bottom-left
+    DrawLineEx(
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - (highlight_offset + 1), SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x + highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        2,
+        food_highlight_color
+    );
+
+    // draw up from bottom-left
+    DrawLineEx(
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) - (highlight_offset + 1)},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        2,
+        food_highlight_color
+    );
+
+    // draw left from top-right
+    DrawLineEx(
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + (highlight_offset + 1), SNAKE_BODY_WIDTH * food.y - highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) - highlight_offset, SNAKE_BODY_WIDTH * food.y - highlight_offset},
+        2,
+        food_highlight_color
+    );
+
+    // draw down from top-right
+    DrawLineEx(
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset, SNAKE_BODY_WIDTH * food.y - (highlight_offset + 1)},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset, SNAKE_BODY_WIDTH * food.y + highlight_offset},
+        2,
+        food_highlight_color
+    );
+
+    // draw left from bottom-right
+    DrawLineEx(
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) - highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + (highlight_offset + 1), SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        2,
+        food_highlight_color
+    );
+
+    // draw up from bottom-right
+    DrawLineEx(
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) - (highlight_offset + 1)},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        2,
+        food_highlight_color
     );
 }
+
+typedef void draw_background(void);
 
 void draw_striped_bg() {
     ClearBackground(BG_PRIMARY);
@@ -377,14 +497,27 @@ int main() {
     int snake_body_count = 3;
     SnakeDirection snake_direction = DIR_RIGHT;
     int frames_elapsed = 0;
-    int snake_movement_frame_delay = 0.25 * FPS; // one second delay
+    int snake_movement_frame_delay = 0.10 * FPS; // one second delay
 
     Vector2 food = generate_food(snake_body, snake_body_count);
 
     int score = 0;
 
     Queue *input_queue = queue_create(sizeof(SnakeDirection), 5);
-    GameState game_state = PLAYING;
+    game_state = PLAYING;
+
+    draw_background *draw_bg[] = {
+        draw_plus_matrix_bg,
+        draw_dot_matrix_bg,
+        draw_checkered_bg,
+        draw_grid_bg,
+        draw_dense_striped_bg,
+        draw_semi_thick_striped_bg,
+        draw_thick_striped_bg,
+        draw_striped_bg,
+    };
+    int draw_bg_fn_index = 0;
+    
     while(!WindowShouldClose()) {
 
         // TODO(huzaif): function peek_end() has not been tested
@@ -437,6 +570,18 @@ int main() {
                 enqueue(input_queue, &direction_to_queue);
                 printf("\nD pressed!\n");
                 input_queue_data_printer(input_queue);
+            }
+        }
+
+        int key_pressed = 0;
+        while((key_pressed = GetKeyPressed()) != 0) {
+            if(key_pressed >= KEY_ZERO && key_pressed <= KEY_NINE) {
+                // TODO(huzaif): I don't know if this is a good way
+                size_t draw_bg_array_size = sizeof(draw_bg)/sizeof(draw_bg[0]);
+                int idx = key_pressed - KEY_ZERO - 1;
+                if(idx >= 0 && idx < draw_bg_array_size) {
+                    draw_bg_fn_index = idx;
+                }
             }
         }
 
@@ -506,16 +651,9 @@ int main() {
         int game_over_text_width = MeasureText(game_over_text, 20);
         BeginDrawing();
         {
-            // draw_striped_bg();
-            // draw_dense_striped_bg();
-            // draw_thick_striped_bg();
-            // draw_semi_thick_striped_bg();
-            // draw_dot_matrix_bg();
-            // draw_plus_matrix_bg();
-            // draw_grid_bg();
-            draw_checkered_bg();
-            draw_food(food);
+            draw_bg[draw_bg_fn_index]();
             draw_snake(snake_body, snake_body_count);
+            draw_food(food);
             DrawText(score_text, screen_width - score_text_width - 10, 10, 20, ORANGE);
             if(game_state == GAME_OVER) {
                 DrawText(game_over_text, screen_width/2 - game_over_text_width/2, 10, 20, RED);
