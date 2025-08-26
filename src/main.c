@@ -5,12 +5,18 @@
 #include "utils/queue.h"
 
 #define FPS 60
-#define SNAKE_BODY_WIDTH 24
 
 #define BG_PRIMARY CLITERAL(Color){ 11, 24, 31, 255 }
 #define BG_SECONDARY CLITERAL(Color){ 28, 39, 45, 255 }
 
 #define SNAKE_GREEN CLITERAL(Color){ 106, 200, 89, 255 }
+
+#define SNAKE_BODY_WIDTH 24
+#define GRID_MARGIN SNAKE_BODY_WIDTH
+#define GRID_WIDTH (32 * SNAKE_BODY_WIDTH)
+#define GRID_HEIGHT (32 * SNAKE_BODY_WIDTH)
+#define ROWS (GRID_HEIGHT / SNAKE_BODY_WIDTH)
+#define COLS (GRID_WIDTH / SNAKE_BODY_WIDTH)
 
 typedef enum {
     DIR_UP,
@@ -48,12 +54,8 @@ int snake_head_snake_body_collision_index(Vector2 *snake_body, int snake_body_co
 }
 
 Vector2 generate_food(Vector2 *snake_body, int snake_body_count) {
-    int screen_width = GetScreenWidth();
-    int screen_height = GetScreenHeight();
-    int rows = screen_height / SNAKE_BODY_WIDTH;
-    int cols = screen_width / SNAKE_BODY_WIDTH;
-    int row = GetRandomValue(0, rows-1);
-    int col = GetRandomValue(0, cols-1);
+    int row = GetRandomValue(0, ROWS-1);
+    int col = GetRandomValue(0, COLS-1);
     bool generated = false;
     do {
         if(food_snake_body_collision_index(
@@ -61,8 +63,8 @@ Vector2 generate_food(Vector2 *snake_body, int snake_body_count) {
             snake_body,
             snake_body_count
         ) != -1) {
-            row = GetRandomValue(0, rows-1);
-            col = GetRandomValue(0, cols-1);
+            row = GetRandomValue(0, ROWS-1);
+            col = GetRandomValue(0, COLS-1);
         } else {
             generated = true;
         }
@@ -72,22 +74,25 @@ Vector2 generate_food(Vector2 *snake_body, int snake_body_count) {
 
 void draw_snake(Vector2 *snake_body, int snake_body_count) {
 
-    for(int i = 0; i < snake_body_count; i++) {
+    for(int i = snake_body_count - 1; i >= 0; i--) {
         Vector2 snake_body_part = snake_body[i];
         Color snake_color = SNAKE_GREEN;
         if(i == 0) {
             snake_color = WHITE;
+            if(game_state == GAME_OVER) {
+                snake_color = RED;
+            }
         }
         DrawRectangle(
-            SNAKE_BODY_WIDTH * (snake_body_part.x),
-            SNAKE_BODY_WIDTH * (snake_body_part.y),
+            SNAKE_BODY_WIDTH * (snake_body_part.x) + GRID_MARGIN,
+            SNAKE_BODY_WIDTH * (snake_body_part.y) + GRID_MARGIN,
             SNAKE_BODY_WIDTH,
             SNAKE_BODY_WIDTH,
             snake_color
         );
         DrawRectangleLines(
-            SNAKE_BODY_WIDTH * (snake_body_part.x),
-            SNAKE_BODY_WIDTH * (snake_body_part.y),
+            SNAKE_BODY_WIDTH * (snake_body_part.x) + GRID_MARGIN,
+            SNAKE_BODY_WIDTH * (snake_body_part.y) + GRID_MARGIN,
             SNAKE_BODY_WIDTH,
             SNAKE_BODY_WIDTH,
             BG_PRIMARY
@@ -97,8 +102,8 @@ void draw_snake(Vector2 *snake_body, int snake_body_count) {
 
 void draw_food(Vector2 food) {
     DrawRectangle(
-        SNAKE_BODY_WIDTH * (food.x),
-        SNAKE_BODY_WIDTH * (food.y),
+        SNAKE_BODY_WIDTH * (food.x) + GRID_MARGIN,
+        SNAKE_BODY_WIDTH * (food.y) + GRID_MARGIN,
         SNAKE_BODY_WIDTH,
         SNAKE_BODY_WIDTH,
         ORANGE
@@ -106,16 +111,16 @@ void draw_food(Vector2 food) {
 
     // draw left eye
     DrawCircle(
-        SNAKE_BODY_WIDTH * (food.x + 0.3),
-        SNAKE_BODY_WIDTH * (food.y + 0.3),
+        SNAKE_BODY_WIDTH * (food.x + 0.3) + GRID_MARGIN,
+        SNAKE_BODY_WIDTH * (food.y + 0.3) + GRID_MARGIN,
         0.1 * SNAKE_BODY_WIDTH,
         BG_PRIMARY
     );
 
     // draw right eye
     DrawCircle(
-        SNAKE_BODY_WIDTH * (food.x + 0.7),
-        SNAKE_BODY_WIDTH * (food.y + 0.3),
+        SNAKE_BODY_WIDTH * (food.x + 0.7) + GRID_MARGIN,
+        SNAKE_BODY_WIDTH * (food.y + 0.3) + GRID_MARGIN,
         0.1 * SNAKE_BODY_WIDTH,
         BG_PRIMARY
     );
@@ -124,8 +129,8 @@ void draw_food(Vector2 food) {
     if(game_state == GAME_OVER) {
         DrawCircleSector(
             (Vector2) {
-                SNAKE_BODY_WIDTH * (food.x + 0.5),
-                SNAKE_BODY_WIDTH * (food.y + 0.5),
+                SNAKE_BODY_WIDTH * (food.x + 0.5) + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (food.y + 0.5) + GRID_MARGIN,
             },
             SNAKE_BODY_WIDTH/4,
             0,
@@ -136,12 +141,12 @@ void draw_food(Vector2 food) {
     } else if(game_state == PAUSED) {
         DrawLineEx(
             (Vector2) {
-                SNAKE_BODY_WIDTH * (food.x + 0.3),
-                SNAKE_BODY_WIDTH * (food.y + 0.7),
+                SNAKE_BODY_WIDTH * (food.x + 0.3) + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (food.y + 0.7) + GRID_MARGIN,
             },
             (Vector2) {
-                SNAKE_BODY_WIDTH * (food.x + 0.7),
-                SNAKE_BODY_WIDTH * (food.y + 0.7),
+                SNAKE_BODY_WIDTH * (food.x + 0.7) + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (food.y + 0.7) + GRID_MARGIN,
             },
             2,
             BG_PRIMARY
@@ -149,8 +154,8 @@ void draw_food(Vector2 food) {
     } else if(game_state == PLAYING) {
         DrawCircleSector(
             (Vector2) {
-                SNAKE_BODY_WIDTH * (food.x + 0.5),
-                SNAKE_BODY_WIDTH * (food.y + 0.75),
+                SNAKE_BODY_WIDTH * (food.x + 0.5) + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (food.y + 0.75) + GRID_MARGIN,
             },
             SNAKE_BODY_WIDTH/4,
             180,
@@ -166,64 +171,64 @@ void draw_food(Vector2 food) {
 
     // draw right from top-left
     DrawLineEx(
-        (Vector2) {SNAKE_BODY_WIDTH * food.x - (highlight_offset + 1), SNAKE_BODY_WIDTH * food.y - highlight_offset},
-        (Vector2) {SNAKE_BODY_WIDTH * food.x + highlight_offset, SNAKE_BODY_WIDTH * food.y - highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - (highlight_offset + 1) + GRID_MARGIN, SNAKE_BODY_WIDTH * food.y - highlight_offset + GRID_MARGIN},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x + highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * food.y - highlight_offset + GRID_MARGIN},
         2,
         food_highlight_color
     );
 
     // draw down from top-left
     DrawLineEx(
-        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset, SNAKE_BODY_WIDTH * food.y - (highlight_offset + 1)},
-        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset, SNAKE_BODY_WIDTH * food.y + highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * food.y - (highlight_offset + 1) + GRID_MARGIN},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * food.y + highlight_offset + GRID_MARGIN},
         2,
         food_highlight_color
     );
 
     // draw right from bottom-left
     DrawLineEx(
-        (Vector2) {SNAKE_BODY_WIDTH * food.x - (highlight_offset + 1), SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
-        (Vector2) {SNAKE_BODY_WIDTH * food.x + highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - (highlight_offset + 1) + GRID_MARGIN, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset + GRID_MARGIN},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x + highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset + GRID_MARGIN},
         2,
         food_highlight_color
     );
 
     // draw up from bottom-left
     DrawLineEx(
-        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) - (highlight_offset + 1)},
-        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * (food.y + 1) - (highlight_offset + 1) + GRID_MARGIN},
+        (Vector2) {SNAKE_BODY_WIDTH * food.x - highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset + GRID_MARGIN},
         2,
         food_highlight_color
     );
 
     // draw left from top-right
     DrawLineEx(
-        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + (highlight_offset + 1), SNAKE_BODY_WIDTH * food.y - highlight_offset},
-        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) - highlight_offset, SNAKE_BODY_WIDTH * food.y - highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + (highlight_offset + 1) + GRID_MARGIN, SNAKE_BODY_WIDTH * food.y - highlight_offset + GRID_MARGIN},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) - highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * food.y - highlight_offset + GRID_MARGIN},
         2,
         food_highlight_color
     );
 
     // draw down from top-right
     DrawLineEx(
-        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset, SNAKE_BODY_WIDTH * food.y - (highlight_offset + 1)},
-        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset, SNAKE_BODY_WIDTH * food.y + highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * food.y - (highlight_offset + 1) + GRID_MARGIN},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * food.y + highlight_offset + GRID_MARGIN},
         2,
         food_highlight_color
     );
 
     // draw left from bottom-right
     DrawLineEx(
-        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) - highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
-        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + (highlight_offset + 1), SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) - highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset + GRID_MARGIN},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + (highlight_offset + 1) + GRID_MARGIN, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset + GRID_MARGIN},
         2,
         food_highlight_color
     );
 
     // draw up from bottom-right
     DrawLineEx(
-        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) - (highlight_offset + 1)},
-        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * (food.y + 1) - (highlight_offset + 1) + GRID_MARGIN},
+        (Vector2) {SNAKE_BODY_WIDTH * (food.x + 1) + highlight_offset + GRID_MARGIN, SNAKE_BODY_WIDTH * (food.y + 1) + highlight_offset + GRID_MARGIN},
         2,
         food_highlight_color
     );
@@ -234,109 +239,141 @@ typedef void draw_background(void);
 void draw_striped_bg() {
     ClearBackground(BG_PRIMARY);
     int line_thickness = 2;
-    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
-    for(int i = 0; i < rows; i++) {
+    for(int i = 0; i < ROWS; i++) {
         DrawLineEx(
-            (Vector2) {0, i * SNAKE_BODY_WIDTH},
-            (Vector2) {GetScreenWidth(), i * SNAKE_BODY_WIDTH},
+            (Vector2) {GRID_MARGIN, i * SNAKE_BODY_WIDTH + GRID_MARGIN},
+            (Vector2) {GRID_WIDTH + GRID_MARGIN, i * SNAKE_BODY_WIDTH + GRID_MARGIN},
             line_thickness,
             BG_SECONDARY
         );
     }
+    DrawRectangleLines(
+        GRID_MARGIN, GRID_MARGIN,
+        GRID_WIDTH, GRID_HEIGHT,
+        BG_SECONDARY
+    );
 }
 void draw_dense_striped_bg() {
     ClearBackground(BG_PRIMARY);
     int line_thickness = 3;
-    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
-    for(int i = 0; i < 2 * rows; i++) {
+    for(int i = 0; i < 2 * ROWS; i++) {
         DrawLineEx(
-            (Vector2) {0, i * SNAKE_BODY_WIDTH/2},
-            (Vector2) {GetScreenWidth(), i * SNAKE_BODY_WIDTH/2},
+            (Vector2) {GRID_MARGIN, i * SNAKE_BODY_WIDTH/2 + GRID_MARGIN},
+            (Vector2) {GRID_WIDTH + GRID_MARGIN, i * SNAKE_BODY_WIDTH/2 + GRID_MARGIN},
             line_thickness,
             BG_SECONDARY
         );
     }
+    DrawRectangleLines(
+        GRID_MARGIN, GRID_MARGIN,
+        GRID_WIDTH, GRID_HEIGHT,
+        BG_SECONDARY
+    );
 }
 
 void draw_thick_striped_bg() {
     ClearBackground(BG_PRIMARY);
-    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
-    for(int i = 0; i < rows; i++) {
+    for(int i = 0; i < ROWS; i++) {
         if(i % 2) {
-            DrawRectangle(0, i * SNAKE_BODY_WIDTH, GetScreenWidth(), SNAKE_BODY_WIDTH, BG_SECONDARY);
+            DrawRectangle(
+                GRID_MARGIN,
+                i * SNAKE_BODY_WIDTH + GRID_MARGIN,
+                GRID_WIDTH,
+                SNAKE_BODY_WIDTH,
+                BG_SECONDARY
+            );
         }
     }
+    DrawRectangleLines(
+        GRID_MARGIN, GRID_MARGIN,
+        GRID_WIDTH, GRID_HEIGHT,
+        BG_SECONDARY
+    );
 }
 
 void draw_semi_thick_striped_bg() {
     ClearBackground(BG_PRIMARY);
-    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
-    for(int i = 0; i < 2 * rows; i++) {
+    for(int i = 0; i < 2 * ROWS; i++) {
         if(i % 2) {
-            DrawRectangle(0, i * SNAKE_BODY_WIDTH/2, GetScreenWidth(), SNAKE_BODY_WIDTH/2, BG_SECONDARY);
+            DrawRectangle(
+                GRID_MARGIN,
+                i * SNAKE_BODY_WIDTH/2 + GRID_MARGIN,
+                GRID_WIDTH,
+                SNAKE_BODY_WIDTH/2,
+                BG_SECONDARY
+            );
         }
     }
+    DrawRectangleLines(
+        GRID_MARGIN, GRID_MARGIN,
+        GRID_WIDTH, GRID_HEIGHT,
+        BG_SECONDARY
+    );
 }
 
 void draw_dot_matrix_bg() {
     ClearBackground(BG_PRIMARY);
-    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
-    int cols = GetScreenWidth() / SNAKE_BODY_WIDTH;
     int dot_thickness = 4;
-    for(int i = 0; i < rows; i++) {
-        for(int j = 0; j < cols; j++) {
+    for(int i = 1; i < ROWS; i++) {
+        for(int j = 1; j < COLS; j++) {
             DrawRectangle(
-                j * SNAKE_BODY_WIDTH - dot_thickness/2,
-                i * SNAKE_BODY_WIDTH - dot_thickness/2,
+                j * SNAKE_BODY_WIDTH - dot_thickness/2 + GRID_MARGIN,
+                i * SNAKE_BODY_WIDTH - dot_thickness/2 + GRID_MARGIN,
                 dot_thickness,
                 dot_thickness,
                 BG_SECONDARY
             );
         }
     }
+    DrawRectangleLines(
+        GRID_MARGIN, GRID_MARGIN,
+        GRID_WIDTH, GRID_HEIGHT,
+        BG_SECONDARY
+    );
 }
 
 void draw_plus_matrix_bg() {
     ClearBackground(BG_PRIMARY);
-    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
-    int cols = GetScreenWidth() / SNAKE_BODY_WIDTH;
     int line_thickness = 2;
     int plus_thickness = 12;
-    for(int i = 0; i < rows; i++) {
-        for(int j = 0; j < cols; j++) {
+    for(int i = 1; i < ROWS; i++) {
+        for(int j = 1; j < COLS; j++) {
             DrawLineEx(
-                (Vector2) {j * SNAKE_BODY_WIDTH - plus_thickness/2, i * SNAKE_BODY_WIDTH},
-                (Vector2) {j * SNAKE_BODY_WIDTH + plus_thickness/2, i * SNAKE_BODY_WIDTH},
+                (Vector2) {j * SNAKE_BODY_WIDTH - plus_thickness/2 + GRID_MARGIN, i * SNAKE_BODY_WIDTH + GRID_MARGIN},
+                (Vector2) {j * SNAKE_BODY_WIDTH + plus_thickness/2 + GRID_MARGIN, i * SNAKE_BODY_WIDTH + GRID_MARGIN},
                 line_thickness,
                 BG_SECONDARY
             );
             DrawLineEx(
-                (Vector2) {j * SNAKE_BODY_WIDTH, i * SNAKE_BODY_WIDTH - plus_thickness/2},
-                (Vector2) {j * SNAKE_BODY_WIDTH, i * SNAKE_BODY_WIDTH + plus_thickness/2},
+                (Vector2) {j * SNAKE_BODY_WIDTH + GRID_MARGIN, i * SNAKE_BODY_WIDTH - plus_thickness/2 + GRID_MARGIN},
+                (Vector2) {j * SNAKE_BODY_WIDTH + GRID_MARGIN, i * SNAKE_BODY_WIDTH + plus_thickness/2 + GRID_MARGIN},
                 line_thickness,
                 BG_SECONDARY
             );
         }
     }
+    DrawRectangleLines(
+        GRID_MARGIN, GRID_MARGIN,
+        GRID_WIDTH, GRID_HEIGHT,
+        BG_SECONDARY
+    );
 }
 
 void draw_grid_bg() {
     ClearBackground(BG_PRIMARY);
     int line_thickness = 2;
-    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
-    int cols = GetScreenWidth() / SNAKE_BODY_WIDTH;
-    for(int i = 0; i < rows; i++) {
+    for(int i = 0; i <= ROWS; i++) {
         DrawLineEx(
-            (Vector2) {0, i * SNAKE_BODY_WIDTH},
-            (Vector2) {GetScreenWidth(), i * SNAKE_BODY_WIDTH},
+            (Vector2) {GRID_MARGIN, i * SNAKE_BODY_WIDTH + GRID_MARGIN},
+            (Vector2) {GRID_WIDTH + GRID_MARGIN, i * SNAKE_BODY_WIDTH + GRID_MARGIN},
             line_thickness,
             BG_SECONDARY
         );
     }
-    for(int i = 0; i < cols; i++) {
+    for(int i = 0; i <= COLS; i++) {
         DrawLineEx(
-            (Vector2) {i * SNAKE_BODY_WIDTH, 0},
-            (Vector2) {i * SNAKE_BODY_WIDTH, GetScreenHeight(),},
+            (Vector2) {i * SNAKE_BODY_WIDTH + GRID_MARGIN, GRID_MARGIN},
+            (Vector2) {i * SNAKE_BODY_WIDTH + GRID_MARGIN, GRID_HEIGHT + GRID_MARGIN},
             line_thickness,
             BG_SECONDARY
         );
@@ -345,14 +382,12 @@ void draw_grid_bg() {
 
 void draw_checkered_bg() {
     ClearBackground(BG_PRIMARY);
-    int rows = GetScreenHeight() / SNAKE_BODY_WIDTH;
-    int cols = GetScreenWidth() / SNAKE_BODY_WIDTH;
-    for(int i = 0; i < rows; i++) {
-        for(int j = 0; j < cols; j++) {
+    for(int i = 0; i < ROWS; i++) {
+        for(int j = 0; j < COLS; j++) {
             if((i + j) % 2 == 0) {
                 DrawRectangle(
-                    j * SNAKE_BODY_WIDTH,
-                    i * SNAKE_BODY_WIDTH,
+                    j * SNAKE_BODY_WIDTH + GRID_MARGIN,
+                    i * SNAKE_BODY_WIDTH + GRID_MARGIN,
                     SNAKE_BODY_WIDTH,
                     SNAKE_BODY_WIDTH,
                     BG_SECONDARY
@@ -360,6 +395,11 @@ void draw_checkered_bg() {
             }
         }
     }
+    DrawRectangleLines(
+        GRID_MARGIN, GRID_MARGIN,
+        GRID_WIDTH, GRID_HEIGHT,
+        BG_SECONDARY
+    );
 }
 
 SnakeDirection get_opposite_snake_direction(SnakeDirection snake_direction) {
@@ -482,17 +522,15 @@ void input_queue_data_printer(Queue *q) {
 }
 
 int main() {
-    const int screen_width = 32 * SNAKE_BODY_WIDTH;
-    const int screen_height = 32 * SNAKE_BODY_WIDTH;
-    int rows = screen_height / SNAKE_BODY_WIDTH;
-    int cols = screen_width / SNAKE_BODY_WIDTH;
+    const int screen_width = GRID_WIDTH + 2 * GRID_MARGIN;
+    const int screen_height = GRID_HEIGHT + 2 * GRID_MARGIN;
     InitWindow(screen_width, screen_height, "Snake");
     SetTargetFPS(FPS);
     // TODO(huzaif): Implement a dynamic array and use it for the snake body
     Vector2 snake_body[1000] = {
-        (Vector2) {cols/2, rows/2},
-        (Vector2) {cols/2 - 1, rows/2},
-        (Vector2) {cols/2 - 2 , rows/2},
+        (Vector2) {COLS/2, ROWS/2},
+        (Vector2) {COLS/2 - 1, ROWS/2},
+        (Vector2) {COLS/2 - 2 , ROWS/2},
     };
     int snake_body_count = 3;
     SnakeDirection snake_direction = DIR_RIGHT;
@@ -532,8 +570,6 @@ int main() {
             ) {
                 direction_to_queue = DIR_UP;
                 enqueue(input_queue, &direction_to_queue);
-                printf("\nW pressed!\n");
-                input_queue_data_printer(input_queue);
             }
         }
 
@@ -544,8 +580,6 @@ int main() {
             ) {
                 direction_to_queue = DIR_DOWN;
                 enqueue(input_queue, &direction_to_queue);
-                printf("\nS pressed!\n");
-                input_queue_data_printer(input_queue);
             }
         }
 
@@ -556,8 +590,6 @@ int main() {
             ) {
                 direction_to_queue = DIR_LEFT;
                 enqueue(input_queue, &direction_to_queue);
-                printf("\nA pressed!\n");
-                input_queue_data_printer(input_queue);
             }
         }
 
@@ -568,8 +600,6 @@ int main() {
             ) {
                 direction_to_queue = DIR_RIGHT;
                 enqueue(input_queue, &direction_to_queue);
-                printf("\nD pressed!\n");
-                input_queue_data_printer(input_queue);
             }
         }
 
@@ -602,16 +632,16 @@ int main() {
             Vector2 vector2_snake_direction = vector2_from_snake_direction(snake_direction);
             snake_body[0].x += vector2_snake_direction.x;
             if(snake_body[0].x < 0) {
-                snake_body[0].x = cols - 1;
+                snake_body[0].x = COLS - 1;
             }
-            if(snake_body[0].x >= cols) {
+            if(snake_body[0].x >= COLS) {
                 snake_body[0].x = 0;
             }
             snake_body[0].y += vector2_snake_direction.y;
             if(snake_body[0].y < 0) {
-                snake_body[0].y = rows - 1;
+                snake_body[0].y = ROWS - 1;
             }
-            if(snake_body[0].y >= cols) {
+            if(snake_body[0].y >= COLS) {
                 snake_body[0].y = 0;
             }
             int collided_body_part_index = food_snake_body_collision_index(
@@ -654,9 +684,9 @@ int main() {
             draw_bg[draw_bg_fn_index]();
             draw_snake(snake_body, snake_body_count);
             draw_food(food);
-            DrawText(score_text, screen_width - score_text_width - 10, 10, 20, ORANGE);
+            DrawText(score_text, screen_width - score_text_width - 10, 4, 20, ORANGE);
             if(game_state == GAME_OVER) {
-                DrawText(game_over_text, screen_width/2 - game_over_text_width/2, 10, 20, RED);
+                DrawText(game_over_text, screen_width/2 - game_over_text_width/2, 4, 20, RED);
             }
         }
         EndDrawing();
