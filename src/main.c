@@ -12,7 +12,7 @@
 #define SNAKE_GREEN CLITERAL(Color){ 106, 200, 89, 255 }
 
 #define SNAKE_BODY_WIDTH 24
-#define GRID_MARGIN SNAKE_BODY_WIDTH
+#define GRID_MARGIN (2 * SNAKE_BODY_WIDTH)
 #define GRID_WIDTH (32 * SNAKE_BODY_WIDTH)
 #define GRID_HEIGHT (32 * SNAKE_BODY_WIDTH)
 #define ROWS (GRID_HEIGHT / SNAKE_BODY_WIDTH)
@@ -521,29 +521,55 @@ void input_queue_data_printer(Queue *q) {
     input_queue_filled_data_printer(q);
 }
 
+void init_new_game(
+    Vector2 *out_snake_body,
+    int *out_snake_body_count,
+    SnakeDirection *out_snake_direction,
+    Vector2 *out_food,
+    int *out_score,
+    Queue *input_queue
+) {
+    
+    out_snake_body[0] = (Vector2) {COLS/2, ROWS/2};
+    out_snake_body[1] = (Vector2) {COLS/2 - 1, ROWS/2},
+    out_snake_body[2] = (Vector2) {COLS/2 - 2 , ROWS/2},
+    *out_snake_body_count = 3;
+    *out_snake_direction = DIR_RIGHT;
+    *out_food = generate_food(out_snake_body, *out_snake_body_count);
+    *out_score = 0;
+    
+    input_queue->start = -1;
+    input_queue->end = 0;
+    game_state = PLAYING;
+}
+
 int main() {
     const int screen_width = GRID_WIDTH + 2 * GRID_MARGIN;
     const int screen_height = GRID_HEIGHT + 2 * GRID_MARGIN;
     InitWindow(screen_width, screen_height, "Snake");
+    InitAudioDevice();
+    SetExitKey(KEY_NULL);
     SetTargetFPS(FPS);
-    // TODO(huzaif): Implement a dynamic array and use it for the snake body
-    Vector2 snake_body[1000] = {
-        (Vector2) {COLS/2, ROWS/2},
-        (Vector2) {COLS/2 - 1, ROWS/2},
-        (Vector2) {COLS/2 - 2 , ROWS/2},
-    };
-    int snake_body_count = 3;
-    SnakeDirection snake_direction = DIR_RIGHT;
-    int frames_elapsed = 0;
-    int snake_movement_frame_delay = 0.10 * FPS; // one second delay
-
-    Vector2 food = generate_food(snake_body, snake_body_count);
-
-    int score = 0;
-
+    
+    Vector2 snake_body[ROWS * COLS];
+    int snake_body_count;
+    SnakeDirection snake_direction;
+    Vector2 food;
     Queue *input_queue = queue_create(sizeof(SnakeDirection), 5);
-    game_state = PLAYING;
-
+    int score;
+    init_new_game(
+        snake_body,
+        &snake_body_count,
+        &snake_direction,
+        &food,
+        &score,
+        input_queue
+    );
+    
+    // load sounds
+    Sound crunch_sound = LoadSound("assets/sounds/crunch.mp3");
+    Sound game_over_sound = LoadSound("assets/sounds/game_over.mp3");
+    
     draw_background *draw_bg[] = {
         draw_plus_matrix_bg,
         draw_dot_matrix_bg,
@@ -555,12 +581,15 @@ int main() {
         draw_striped_bg,
     };
     int draw_bg_fn_index = 0;
+
+    int frames_elapsed = 0;
+    int snake_movement_frame_delay = 0.25 * FPS; // one second delay
     
     while(!WindowShouldClose()) {
-
+        
         // TODO(huzaif): function peek_end() has not been tested
         // TODO(huzaif): test if the input queue implementation actually works properly;
-
+        
         SnakeDirection *input_queue_latest = peek_end(input_queue);
         SnakeDirection direction_to_queue;
         if(IsKeyPressed(KEY_W)) {
@@ -600,6 +629,28 @@ int main() {
             ) {
                 direction_to_queue = DIR_RIGHT;
                 enqueue(input_queue, &direction_to_queue);
+            }
+        }
+
+        if(IsKeyPressed(KEY_ESCAPE)) {
+            if(game_state == PLAYING) {
+                game_state = PAUSED;
+            } else if(game_state == PAUSED) {
+                game_state = PLAYING;
+            }
+        }
+
+        if(IsKeyPressed(KEY_R)) {
+            if(game_state == GAME_OVER) {
+                init_new_game(
+                    snake_body,
+                    &snake_body_count,
+                    &snake_direction,
+                    &food,
+                    &score,
+                    input_queue
+                );
+                StopSound(game_over_sound);
             }
         }
 
@@ -651,6 +702,7 @@ int main() {
             );
             if(collided_body_part_index == 0) {
                 score++;
+                PlaySound(crunch_sound);
                 food = generate_food(snake_body, snake_body_count);
                 Vector2 snake_tail = snake_body[snake_body_count - 1];
                 Vector2 part_before_snake_tail = snake_body[snake_body_count - 2];
@@ -668,6 +720,9 @@ int main() {
 
             collided_body_part_index = snake_head_snake_body_collision_index(snake_body, snake_body_count);
             if(collided_body_part_index != -1) {
+                if(game_state == PLAYING) {
+                    PlaySound(game_over_sound);
+                }
                 game_state = GAME_OVER;
             }
         }
@@ -679,6 +734,14 @@ int main() {
         char game_over_text[256];
         sprintf(game_over_text, "Game Over!");
         int game_over_text_width = MeasureText(game_over_text, 20);
+
+        char game_paused_text[256];
+        sprintf(game_paused_text, "Paused");
+        int game_paused_text_width = MeasureText(game_paused_text, 20);
+
+        char restart_game_text[256];
+        sprintf(restart_game_text, "Press 'R' to restart");
+        int restart_game_text_width = MeasureText(restart_game_text, 40);
         BeginDrawing();
         {
             draw_bg[draw_bg_fn_index]();
@@ -686,10 +749,20 @@ int main() {
             draw_food(food);
             DrawText(score_text, screen_width - score_text_width - 10, 4, 20, ORANGE);
             if(game_state == GAME_OVER) {
+                DrawRectangle(
+                    0, 0,
+                    screen_width, screen_height,
+                    (Color) {.r = 0, .g = 0, .b = 0, .a = 100}
+                );
                 DrawText(game_over_text, screen_width/2 - game_over_text_width/2, 4, 20, RED);
+                DrawText(restart_game_text, screen_width/2 - restart_game_text_width/2, screen_height/2 - 20, 40, GREEN);
+
+            } else if(game_state == PAUSED) {
+                DrawText(game_paused_text, screen_width/2 - game_paused_text_width/2, 4, 20, YELLOW);
             }
         }
         EndDrawing();
     }
+    CloseAudioDevice();
     CloseWindow();
 }
