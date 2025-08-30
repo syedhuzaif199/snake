@@ -12,11 +12,11 @@
 #define SNAKE_GREEN CLITERAL(Color){ 106, 200, 89, 255 }
 
 #define SNAKE_BODY_WIDTH 24
+#define ROWS 32
+#define COLS 32
 #define GRID_MARGIN (2 * SNAKE_BODY_WIDTH)
-#define GRID_WIDTH (32 * SNAKE_BODY_WIDTH)
-#define GRID_HEIGHT (32 * SNAKE_BODY_WIDTH)
-#define ROWS (GRID_HEIGHT / SNAKE_BODY_WIDTH)
-#define COLS (GRID_WIDTH / SNAKE_BODY_WIDTH)
+#define GRID_WIDTH (COLS * SNAKE_BODY_WIDTH)
+#define GRID_HEIGHT (ROWS * SNAKE_BODY_WIDTH)
 
 typedef enum {
     DIR_UP,
@@ -72,8 +72,188 @@ Vector2 generate_food(Vector2 *snake_body, int snake_body_count) {
     return (Vector2) {col, row};
 }
 
-void draw_snake(Vector2 *snake_body, int snake_body_count) {
+typedef void draw_snake_fn(Vector2 *snake_body, int snake_body_count);
 
+void draw_rainbow_snake(Vector2 *snake_body, int snake_body_count) {
+    int body_part_padding = 0.2 * SNAKE_BODY_WIDTH;
+    for(int i = snake_body_count - 1; i >= 0; i--) {
+        Vector2 snake_body_part = snake_body[i];
+        Color snake_color = ColorFromHSV(360.0f * (float)i/snake_body_count, 1.0f, 1.0f);
+        if(i == 0) {
+            snake_color = WHITE;
+            if(game_state == GAME_OVER) {
+                snake_color = RED;
+            }
+        }
+
+        Rectangle body_part_rect = {
+            SNAKE_BODY_WIDTH * (snake_body_part.x) + body_part_padding + GRID_MARGIN,
+            SNAKE_BODY_WIDTH * (snake_body_part.y) + body_part_padding + GRID_MARGIN,
+            SNAKE_BODY_WIDTH - 2 * body_part_padding,
+            SNAKE_BODY_WIDTH - 2 * body_part_padding,
+        };
+
+        float roundness = 0.5;
+        int segments = 4;
+        DrawRectangleRounded(
+            body_part_rect,
+            roundness,
+            segments,
+            snake_color
+        );
+        // DrawRectangleRoundedLines(
+        //     body_part_rect,
+        //     roundness,
+        //     segments,
+        //     BG_PRIMARY
+        // );
+    }
+
+    for(int i = 0; i < snake_body_count - 1; i++) {
+        Vector2 part1, part2;
+        part1 = snake_body[i];
+        part2 = snake_body[i+1];
+        if(snake_body[i].x > snake_body[i+1].x) {
+            part1 = snake_body[i+1];
+            part2 = snake_body[i];
+        }
+        if(snake_body[i].y > snake_body[i+1].y) {
+            part1 = snake_body[i+1];
+            part2 = snake_body[i];
+        }
+        Vector2 diff = (Vector2) {part1.x - part2.x, part1.y - part2.y};
+        // should always be negative for horizontally aligned parts
+        // because part1.x is less than part2.x from the nature of
+        // the above conditional assignments
+        Color snake_color = ColorFromHSV(360.0f * ((float)i + 0.5)/snake_body_count, 1.0f, 1.0f);
+        if(diff.x < 0) { // assuming x is -1
+            DrawRectangle(
+                part2.x * SNAKE_BODY_WIDTH - body_part_padding + GRID_MARGIN,
+                part2.y * SNAKE_BODY_WIDTH + body_part_padding + 1 + GRID_MARGIN,
+                2 * body_part_padding,
+                SNAKE_BODY_WIDTH - 2 * body_part_padding - 2,
+                // GRAY
+                snake_color
+            );
+            // DrawRectangleLines(
+            //     part2.x * SNAKE_BODY_WIDTH - body_part_padding + GRID_MARGIN,
+            //     part2.y * SNAKE_BODY_WIDTH + body_part_padding + 1 + GRID_MARGIN,
+            //     2 * body_part_padding,
+            //     SNAKE_BODY_WIDTH - 2 * body_part_padding - 2,
+            //     BG_PRIMARY
+            // );
+        } else {    // assuming y is -1
+            DrawRectangle(
+                part2.x * SNAKE_BODY_WIDTH + body_part_padding + 1 + GRID_MARGIN,
+                part2.y * SNAKE_BODY_WIDTH - body_part_padding + GRID_MARGIN,
+                SNAKE_BODY_WIDTH - 2 * body_part_padding -2,
+                2 * body_part_padding,
+                // GRAY
+                snake_color
+            );
+            // DrawRectangleLines(
+            //     part2.x * SNAKE_BODY_WIDTH + body_part_padding + 1 + GRID_MARGIN,
+            //     part2.y * SNAKE_BODY_WIDTH - body_part_padding + GRID_MARGIN,
+            //     SNAKE_BODY_WIDTH - 2 * body_part_padding -2,
+            //     2 * body_part_padding,
+            //     BG_PRIMARY
+            // );
+        }
+    }
+}
+
+void draw_snake_piped(Vector2 *snake_body, int snake_body_count) {
+    for(int i = snake_body_count - 1; i >= 0; i--) {
+        Vector2 snake_body_part = snake_body[i];
+        Color snake_color = SNAKE_GREEN;
+        if(i == 0 && game_state == GAME_OVER) {
+            snake_color = RED;
+        }
+        DrawRectangle(
+            SNAKE_BODY_WIDTH * (snake_body_part.x) + GRID_MARGIN,
+            SNAKE_BODY_WIDTH * (snake_body_part.y) + GRID_MARGIN,
+            SNAKE_BODY_WIDTH,
+            SNAKE_BODY_WIDTH,
+            snake_color
+        );
+    }
+    for(int i = snake_body_count - 1; i > 0; i--) {
+        Vector2 part1 = snake_body[i];
+        Vector2 part2 = snake_body[i-1];
+        if(snake_body[i].x > snake_body[i-1].x) {
+            part1 = snake_body[i-1];
+            part2 = snake_body[i];
+        }
+        if(snake_body[i].y > snake_body[i-1].y) {
+            part1 = snake_body[i-1];
+            part2 = snake_body[i];
+        }
+
+        Vector2 diff = (Vector2) {
+            part1.x - part2.x,
+            part1.y - part2.y
+        };
+
+        printf("Diff: {%.3f, %.3f}\n", diff.x, diff.y);
+
+        Color pipe_color = { 106 * 0.5, 200 * 0.5, 89 * 0.5, 255 };
+        int pipe_width = SNAKE_BODY_WIDTH/4;
+        // if the adjacent body parts are separated by COLS - 1 cells
+        // because the snake passed through the left or right screen boundary
+        if(diff.x < -1){ 
+            DrawRectangle(
+                SNAKE_BODY_WIDTH * (part1.x) + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (part1.y + 0.5) - pipe_width/2 + GRID_MARGIN,
+                SNAKE_BODY_WIDTH/2 + pipe_width/2,
+                pipe_width,
+                pipe_color
+            );
+            DrawRectangle(
+                SNAKE_BODY_WIDTH * (part2.x + 0.5) - pipe_width/2 + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (part1.y + 0.5) - pipe_width/2 + GRID_MARGIN,
+                SNAKE_BODY_WIDTH/2 + pipe_width/2,
+                pipe_width,
+                pipe_color
+            );
+        } else if(diff.x < 0){
+            DrawRectangle(
+                SNAKE_BODY_WIDTH * (part1.x + 0.5) - pipe_width/2 + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (part1.y + 0.5) - pipe_width/2 + GRID_MARGIN,
+                SNAKE_BODY_WIDTH + pipe_width,
+                pipe_width,
+                pipe_color
+            );
+        // if the adjacent body parts are separated by ROWS - 1 cells
+        // because the snake passed through the top or bottom screen boundary
+        } else if(diff.y < -1) {
+            DrawRectangle(
+                SNAKE_BODY_WIDTH * (part1.x + 0.5) - pipe_width/2 + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (part1.y ) + GRID_MARGIN,
+                pipe_width,
+                SNAKE_BODY_WIDTH/2 + pipe_width/2,
+                pipe_color
+            );
+            DrawRectangle(
+                SNAKE_BODY_WIDTH * (part1.x + 0.5) - pipe_width/2 + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (part2.y + 0.5) - pipe_width/2 + GRID_MARGIN,
+                pipe_width,
+                SNAKE_BODY_WIDTH/2 + pipe_width/2,
+                pipe_color
+            );
+        }
+        else {
+            DrawRectangle(
+                SNAKE_BODY_WIDTH * (part1.x + 0.5) - pipe_width/2 + GRID_MARGIN,
+                SNAKE_BODY_WIDTH * (part1.y + 0.5) - pipe_width/2 + GRID_MARGIN,
+                pipe_width,
+                SNAKE_BODY_WIDTH + pipe_width,
+                pipe_color
+            );
+        }
+    }
+}
+
+void draw_snake_simple(Vector2 *snake_body, int snake_body_count) {
     for(int i = snake_body_count - 1; i >= 0; i--) {
         Vector2 snake_body_part = snake_body[i];
         Color snake_color = SNAKE_GREEN;
@@ -247,11 +427,7 @@ void draw_striped_bg() {
             BG_SECONDARY
         );
     }
-    DrawRectangleLines(
-        GRID_MARGIN, GRID_MARGIN,
-        GRID_WIDTH, GRID_HEIGHT,
-        BG_SECONDARY
-    );
+    
 }
 void draw_dense_striped_bg() {
     ClearBackground(BG_PRIMARY);
@@ -264,11 +440,7 @@ void draw_dense_striped_bg() {
             BG_SECONDARY
         );
     }
-    DrawRectangleLines(
-        GRID_MARGIN, GRID_MARGIN,
-        GRID_WIDTH, GRID_HEIGHT,
-        BG_SECONDARY
-    );
+    
 }
 
 void draw_thick_striped_bg() {
@@ -284,11 +456,7 @@ void draw_thick_striped_bg() {
             );
         }
     }
-    DrawRectangleLines(
-        GRID_MARGIN, GRID_MARGIN,
-        GRID_WIDTH, GRID_HEIGHT,
-        BG_SECONDARY
-    );
+    
 }
 
 void draw_semi_thick_striped_bg() {
@@ -304,11 +472,7 @@ void draw_semi_thick_striped_bg() {
             );
         }
     }
-    DrawRectangleLines(
-        GRID_MARGIN, GRID_MARGIN,
-        GRID_WIDTH, GRID_HEIGHT,
-        BG_SECONDARY
-    );
+    
 }
 
 void draw_dot_matrix_bg() {
@@ -325,11 +489,7 @@ void draw_dot_matrix_bg() {
             );
         }
     }
-    DrawRectangleLines(
-        GRID_MARGIN, GRID_MARGIN,
-        GRID_WIDTH, GRID_HEIGHT,
-        BG_SECONDARY
-    );
+    
 }
 
 void draw_plus_matrix_bg() {
@@ -352,11 +512,7 @@ void draw_plus_matrix_bg() {
             );
         }
     }
-    DrawRectangleLines(
-        GRID_MARGIN, GRID_MARGIN,
-        GRID_WIDTH, GRID_HEIGHT,
-        BG_SECONDARY
-    );
+    
 }
 
 void draw_grid_bg() {
@@ -395,11 +551,7 @@ void draw_checkered_bg() {
             }
         }
     }
-    DrawRectangleLines(
-        GRID_MARGIN, GRID_MARGIN,
-        GRID_WIDTH, GRID_HEIGHT,
-        BG_SECONDARY
-    );
+    
 }
 
 SnakeDirection get_opposite_snake_direction(SnakeDirection snake_direction) {
@@ -555,7 +707,7 @@ int main() {
     int snake_body_count;
     SnakeDirection snake_direction;
     Vector2 food;
-    Queue *input_queue = queue_create(sizeof(SnakeDirection), 5);
+    Queue *input_queue = queue_create(sizeof(SnakeDirection), 10);
     int score;
     init_new_game(
         snake_body,
@@ -582,8 +734,10 @@ int main() {
     };
     int draw_bg_fn_index = 0;
 
+    draw_snake_fn *draw_snake = draw_snake_piped;
+
     int frames_elapsed = 0;
-    int snake_movement_frame_delay = 0.25 * FPS; // one second delay
+    int snake_movement_frame_delay = 0.02 * FPS; // one second delay
     
     while(!WindowShouldClose()) {
         
@@ -592,7 +746,7 @@ int main() {
         
         SnakeDirection *input_queue_latest = peek_end(input_queue);
         SnakeDirection direction_to_queue;
-        if(IsKeyPressed(KEY_W)) {
+        if(IsKeyPressed(KEY_W) || IsKeyPressed(KEY_UP)) {
             if(
                 !input_queue_latest ||
                 !(*input_queue_latest == DIR_UP || *input_queue_latest == DIR_DOWN)
@@ -602,7 +756,7 @@ int main() {
             }
         }
 
-        if(IsKeyPressed(KEY_S)) {
+        if(IsKeyPressed(KEY_S) || IsKeyPressed(KEY_DOWN)) {
             if(
                 !input_queue_latest ||
                 !(*input_queue_latest == DIR_UP || *input_queue_latest == DIR_DOWN)
@@ -612,7 +766,7 @@ int main() {
             }
         }
 
-        if(IsKeyPressed(KEY_A)) {
+        if(IsKeyPressed(KEY_A) || IsKeyPressed(KEY_LEFT)) {
             if(
                 !input_queue_latest ||
                 !(*input_queue_latest == DIR_LEFT || *input_queue_latest == DIR_RIGHT)
@@ -622,7 +776,7 @@ int main() {
             }
         }
 
-        if(IsKeyPressed(KEY_D)) {
+        if(IsKeyPressed(KEY_D) || IsKeyPressed(KEY_RIGHT)) {
             if(
                 !input_queue_latest ||
                 !(*input_queue_latest == DIR_LEFT || *input_queue_latest == DIR_RIGHT)
@@ -745,6 +899,14 @@ int main() {
         BeginDrawing();
         {
             draw_bg[draw_bg_fn_index]();
+            // draw grid bounding box
+            DrawRectangleLines(
+                GRID_MARGIN,
+                GRID_MARGIN,
+                GRID_WIDTH,
+                GRID_HEIGHT,
+                BG_SECONDARY
+            );
             draw_snake(snake_body, snake_body_count);
             draw_food(food);
             DrawText(score_text, screen_width - score_text_width - 10, 4, 20, ORANGE);
